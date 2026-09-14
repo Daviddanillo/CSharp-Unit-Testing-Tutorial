@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build e Testes (.NET 9)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar o SDK do .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restaurar dependencias
+        run: dotnet restore src/UnitTestingTutorial.slnx
+
+      - name: Compilar
+        run: dotnet build src/UnitTestingTutorial.slnx --configuration Release --no-restore
+
+      - name: Executar os testes e coletar cobertura
+        run: >
+          dotnet test src/UnitTestingTutorial.slnx
+          --configuration Release
+          --no-build
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Consolidar o cobertura na raiz
+        if: always()
+        run: find ./TestResults -name 'coverage.cobertura.xml' -exec cp {} ./coverage.cobertura.xml \;
+
+      - name: Publicar o artefato de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-cobertura-xml
+          path: ./coverage.cobertura.xml
+          if-no-files-found: error
